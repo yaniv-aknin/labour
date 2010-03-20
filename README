@@ -1,0 +1,7 @@
+labour is a suite of libraries and test-drivers to test web-servers under various stress conditions pertaining to misbehaving workers.
+
+labour was written by Yaniv Aknin (yaniv@aknin.name).
+
+This software was inspired by a blog post by Ian Bicking (http://blog.ianbicking.org/2010/03/16/web-server-benchmarking-we-need/) but is in no way affiliated with him.
+
+This software contains trivial server wiring code-fragments by Nicholas Piel, as published here (http://nichol.as/benchmark-of-python-web-servers), but is in no way affiliated with him.
