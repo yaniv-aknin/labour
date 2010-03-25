@@ -2,6 +2,9 @@ import random
 import signal
 import urllib2
 import urlparse
+import logging
+
+LOGGER = logging.getLogger('client')
 
 class Client(object):
     def __init__(self, host='localhost', port=8000):
@@ -14,12 +17,14 @@ class Client(object):
         self.behaviour_paths.extend([behaviour_path]*weight)
     def execute(self, iterations=1):
         base = 'http://%s:%s' % (self.host, self.port,)
-
+        LOGGER.info('Beginning %s requests against %s...' % (iterations, base))
         for iteration in xrange(iterations):
             try:
-                handle = urllib2.urlopen(base + '/' + random.choice(self.behaviour_paths))
+                url = base + '/' + random.choice(self.behaviour_paths)
+                handle = urllib2.urlopen(url)
                 handle.read()
                 handle.close()
                 self.successes += 1
             except urllib2.URLError, error:
                 self.failures += 1
+        LOGGER.info('Finished all requests.')

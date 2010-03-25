@@ -4,6 +4,9 @@ from labour import servers
 from labour import client
 from labour import behaviours
 from labour import report
+from labour import log as log
+
+log.setup_logging()
 
 with servers.WSGIRef() as server:
     driver = client.Client()
