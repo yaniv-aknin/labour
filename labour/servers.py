@@ -11,8 +11,8 @@ class ServerFailedToStart(LabourException):
     "Raised when we fail to receive a successful page delivery from the server during warmup time"
 
 class Server(object):
-    def __init__(self, bind_address='127.0.0.1', port=8000, do_warmup_wait=True):
-        self.bind_address = bind_address
+    def __init__(self, interface='127.0.0.1', port=8000, do_warmup_wait=True):
+        self.interface = interface
         self.port = port
         self.server_pid = None
         self.do_warmup_wait = do_warmup_wait
@@ -20,12 +20,12 @@ class Server(object):
     def __str__(self):
         return self.__class__.__name__
     def __repr__(self):
-        return '<%s on %s:%s>' % (self.__class__.__name__, self.bind_address, self.port,)
+        return '<%s on %s:%s>' % (self.__class__.__name__, self.interface, self.port,)
     def wait_until_warmup(self, iterations=10, delay=1):
         self.logger.info('Waiting for server warm-up...')
         for iteration in range(iterations):
             try:
-                handle = urllib2.urlopen('http://%s:%s' % (self.bind_address, self.port))
+                handle = urllib2.urlopen('http://%s:%s' % (self.interface, self.port))
                 handle.read()
                 handle.close()
                 self.logger.info('Server responds OK to requests.')
@@ -68,7 +68,20 @@ class WSGIRef(Server):
             def log_message(self, *args):
                 pass
 
-        httpd = PimpedWSGIServer((self.bind_address, self.port), PimpedHandler)
+        httpd = PimpedWSGIServer((self.interface, self.port), PimpedHandler)
         httpd.set_app(wsgi_dispatcher)
         self.logger.info('%r serving forever...' % (self,))
         httpd.serve_forever()
+        raise SystemExit(0)
+
+class Twisted(Server):
+    def start(self):
+        from twisted.web.server import Site
+        from twisted.web.wsgi import WSGIResource
+        from twisted.internet import reactor
+
+        resource = WSGIResource(reactor, reactor.getThreadPool(), wsgi_dispatcher)
+        reactor.listenTCP(self.port, Site(resource), interface=self.interface)
+        self.logger.info('%r starting reactor...' % (self,))
+        reactor.run()
+        raise SystemExit(0)
