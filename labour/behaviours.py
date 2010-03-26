@@ -6,10 +6,7 @@ import time
 import random
 import signal
 import os
-
-STATUS_200 = '200 OK'
-STATUS_403 = '403 Forbidden'
-STATUS_404 = '404 Not Found'
+import httplib
 
 behaviours = {}
 def behaviour(cls):
@@ -38,15 +35,16 @@ class Behaviour(object):
 class _NoSuchBehaviour(Behaviour):
     def wsgi(self, environ, start_response):
         output = 'Unknown behaviour requested\n'
-        start_response(STATUS_404, self.make_plain_headers(len(output)))
+        start_response(str(httplib.NOT_FOUND), self.make_plain_headers(len(output)))
         yield output
 _NoSuchBehaviour = _NoSuchBehaviour()
 
 @behaviour
 class PlainResponse(Behaviour):
-    def wsgi(self, environ, start_response, length=None):
+    def wsgi(self, environ, start_response, length=None, status=(httplib.OK,)):
+        status = str(status[0])
         output = 'Pong!\n' if length is None else 'X' * int(length[0])
-        start_response(STATUS_200, self.make_plain_headers(len(output)))
+        start_response(status, self.make_plain_headers(len(output)))
         yield output
 
 @behaviour
@@ -54,7 +52,7 @@ class Sleeping(Behaviour):
     def wsgi(self, environ, start_response, sleep_duration=(1,)):
         sleep_duration = int(sleep_duration[0])
         outputs = ('Sleeping %s... ' % (sleep_duration,), 'and Pong!\n')
-        start_response(STATUS_200, self.make_plain_headers(sum(len(string) for string in outputs)))
+        start_response(str(httplib.OK), self.make_plain_headers(sum(len(string) for string in outputs)))
         yield outputs[0]
         time.sleep(sleep_duration)
         yield outputs[1]
@@ -67,14 +65,14 @@ class IOBound(Behaviour):
         try:
             with file(filename) as file_handle:
                 outputs = ('Reading %s bytes from %s... ' % (length, filename,), 'and Pong!\n')
-                start_response(STATUS_200, self.make_plain_headers(sum(len(string) for string in outputs)))
+                start_response(str(httplib.OK), self.make_plain_headers(sum(len(string) for string in outputs)))
                 yield outputs[0]
                 # HACK: probably saner to read in blocks and discard them block after block, but whatever
                 file_handle.read(length)
                 yield outputs[1]
         except IOError, error:
             output = '%s: %s' % (filename, error.strerror)
-            start_response(STATUS_403, self.make_plain_headers(len(output)))
+            start_response(str(httplib.FORBIDDEN), self.make_plain_headers(len(output)))
             yield output
 
 @behaviour
@@ -85,7 +83,7 @@ class LeakMemory(Behaviour):
             sys.memory_leak = ''
         sys.memory_leak += 'X' * how_many
         output = 'Leaked %s bytes (%s bytes total). Pong!\n' % (how_many, len(sys.memory_leak))
-        start_response(STATUS_200, self.make_plain_headers(len(output)))
+        start_response(str(httplib.OK), self.make_plain_headers(len(output)))
         yield output
 
 @behaviour
@@ -93,7 +91,7 @@ class PythonWedge(Behaviour):
     def wsgi(self, environ, start_response):
         while True: pass
         output = 'Wedged. You should never see this.'
-        start_response(STATUS_200, self.make_plain_headers(len(output)))
+        start_response(str(httplib.OK), self.make_plain_headers(len(output)))
         yield output
 
 @behaviour
@@ -103,5 +101,5 @@ class SIGSEGV(Behaviour):
         #        I'm not certain a 'real' segfault will be a better test, but it prolly not too bad an idea to implement
         os.kill(os.getpid(), signal.SIGSEGV)
         output = 'Raised SIGSEGV. You should never see this.'
-        start_response(STATUS_200, self.make_plain_headers(len(output)))
+        start_response(str(httplib.OK), self.make_plain_headers(len(output)))
         yield output
