@@ -10,18 +10,18 @@ class Client(object):
     def __init__(self, host='localhost', port=8000):
         self.host = host
         self.port = port
-        self.behaviour_paths = []
+        self.behaviours = []
         self.successes = 0
         self.failures = 0
         self.received_statuses = {}
-    def add_behaviour(self, behaviour_path, weight):
-        self.behaviour_paths.extend([behaviour_path]*weight)
+    def add_behaviour(self, behaviours, weight):
+        self.behaviours.extend([behaviours]*weight)
     def execute(self, iterations=1):
         base = 'http://%s:%s' % (self.host, self.port,)
         LOGGER.info('Beginning %s requests against %s...' % (iterations, base))
         for iteration in xrange(iterations):
             try:
-                url = base + '/' + random.choice(self.behaviour_paths)
+                url = base + '/' + str(random.choice(self.behaviours))
                 handle = urllib2.urlopen(url)
                 handle.read()
                 handle.close()
