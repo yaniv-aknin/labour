@@ -27,8 +27,10 @@ def main(argv):
 
     with options.server() as server:
         driver = client.Client()
-        driver.add_behaviour(behaviours.PlainResponse(), weight=98)
+        driver.add_behaviour(behaviours.PlainResponse(), weight=96)
         driver.add_behaviour(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR), weight=1)
+        driver.add_behaviour(behaviours.PlainResponse(status=httplib.FORBIDDEN), weight=1)
+        driver.add_behaviour(behaviours.PlainResponse(status=httplib.NOT_FOUND), weight=1)
         driver.add_behaviour(behaviours.Sleeping(sleep_duration=0.5), weight=1)
 
         driver.execute(iterations=options.iterations)

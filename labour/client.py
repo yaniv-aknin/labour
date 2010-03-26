@@ -13,6 +13,7 @@ class Client(object):
         self.behaviour_paths = []
         self.successes = 0
         self.failures = 0
+        self.received_statuses = {}
     def add_behaviour(self, behaviour_path, weight):
         self.behaviour_paths.extend([behaviour_path]*weight)
     def execute(self, iterations=1):
@@ -27,4 +28,7 @@ class Client(object):
                 self.successes += 1
             except urllib2.URLError, error:
                 self.failures += 1
+                if error.code not in self.received_statuses:
+                    self.received_statuses[error.code] = 0
+                self.received_statuses[error.code] += 1
         LOGGER.info('Finished all requests.')
