@@ -3,9 +3,15 @@ import signal
 import logging
 import urllib2
 import time
+import warnings
 
 from behaviours import wsgi_dispatcher
 from errors import LabourException
+
+servers = {}
+def exposed(cls):
+    servers[cls.__name__] = cls
+    return cls
 
 class ServerFailedToStart(LabourException):
     "Raised when we fail to receive a successful page delivery from the server during warmup time"
@@ -55,6 +61,7 @@ class Server(object):
         os.kill(self.server_pid, signal.SIGTERM)
         self.server_pid = None
 
+@exposed
 class WSGIRef(Server):
     def start(self):
         from wsgiref import simple_server
@@ -74,6 +81,7 @@ class WSGIRef(Server):
         httpd.serve_forever()
         raise SystemExit(0)
 
+@exposed
 class Twisted(Server):
     def start(self):
         from twisted.web.server import Site
@@ -84,4 +92,17 @@ class Twisted(Server):
         reactor.listenTCP(self.port, Site(resource), interface=self.interface)
         self.logger.info('%r starting reactor...' % (self,))
         reactor.run()
+        raise SystemExit(0)
+
+@exposed
+class CherryPy(Server):
+    def start(self):
+        from cherrypy import wsgiserver
+        wsgi_apps = wsgiserver.WSGIPathInfoDispatcher([('/', wsgi_dispatcher)])
+        server = wsgiserver.CherryPyWSGIServer((self.interface, self.port), wsgi_apps, request_queue_size=500,
+                                               server_name=self.interface)
+        server.start()
+        # NOTE: SIGTERMing the server will cause server.stop() to never be reached; I'm not sure if it's important 
+        #        but to fix this we should either install a SIGTERM handler or terminate with SIGINT prior to SIGTERM
+        server.stop()
         raise SystemExit(0)
