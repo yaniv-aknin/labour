@@ -8,6 +8,7 @@ def trivial_report(used_driver):
     print("Total requests sent: %d (%d (%.2f%%) returned OK and %d (%.2f%%) had some failure." %
            (total_requests, used_driver.successes, success_percentage, used_driver.failures, failure_percentage))
     print()
-    print("Failure Breakdown:")
-    for status, amount in used_driver.received_statuses.iteritems():
-        print("Code: %s\tCount: %d\tPercentage: %.2f%%" % (status, amount, float(amount) / used_driver.failures * 100))
+    if used_driver.failures:
+        print("Failure Breakdown:")
+        for status, amount in used_driver.received_statuses.iteritems():
+            print("Code: %s\tCount: %d\tPercentage: %.2f%%" % (status, amount, float(amount) / used_driver.failures * 100))
