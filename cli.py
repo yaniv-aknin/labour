@@ -24,14 +24,14 @@ def main(argv):
     log.setup_logging()
     options = parse_arguments(argv[1:])
 
+    driver = client.Client()
+    driver.add_behaviour(behaviours.PlainResponse(), weight=99)
+    driver.add_behaviour(behaviours.Sleeping(sleep_duration=0.5), weight=1)
+
     with options.server() as server:
-        driver = client.Client()
-        driver.add_behaviour(behaviours.PlainResponse(), weight=99)
-        driver.add_behaviour(behaviours.Sleeping(sleep_duration=0.5), weight=1)
+        statistics = driver.execute(iterations=options.iterations)
 
-        driver.execute(iterations=options.iterations)
-
-    report.trivial_report(driver)
+    report.trivial_report(statistics)
 
 if __name__ == '__main__':
     main(sys.argv)
