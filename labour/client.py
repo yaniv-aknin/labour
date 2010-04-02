@@ -3,8 +3,9 @@ import signal
 import urllib2
 import urlparse
 import logging
+import os
 
-from labour import multicall
+from labour.multicall import multicall
 
 LOGGER = logging.getLogger('client')
 
@@ -58,17 +59,26 @@ class Client(object):
         self.behaviours = []
     def add_behaviour(self, behaviours, weight):
         self.behaviours.extend([behaviours]*weight)
-    def execute(self, iterations=1):
+    def execute(self, iterations=1, number_processes=1):
+        if iterations < number_processes or iterations % number_processes != 0:
+            raise ValueError('can not divide %d iterations between %d processes')
         base = 'http://%s:%s' % (self.host, self.port,)
-        LOGGER.info('Beginning %s requests against %s...' % (iterations, base))
-        for iteration in xrange(iterations):
-            try:
-                self.hit(base + '/' + str(random.choice(self.behaviours)))
-                self.statistics.feed()
-            except urllib2.URLError, error:
-                self.statistics.feed(error)
+        LOGGER.info('Beginning %s requests against %s using %d processes...' % (iterations, base, number_processes))
+        results = multicall(self._execute, (base, self.behaviours, iterations / number_processes),
+                            how_many=number_processes)
+        self.statistics = sum(results, self.statistics)
         LOGGER.info('Finished all requests.')
         return self.statistics
+    def _execute(self, base, behaviours, iterations):
+        LOGGER.info('process %d doing %d iterations' % (os.getpid(), iterations))
+        statistics = HTTPStatistics()
+        for iteration in xrange(iterations):
+            try:
+                self.hit(base + '/' + str(random.choice(behaviours)))
+                statistics.feed()
+            except urllib2.URLError, error:
+                statistics.feed(error)
+        return statistics
     def hit(self, url):
         handle = urllib2.urlopen(url)
         handle.read()
