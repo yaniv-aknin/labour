@@ -1,8 +1,7 @@
 """
 This module contains the classes required to start various WSGI servers for the sake of a test.
 
-FIXME: Some servers have shutdown code which will never be reached as the server is terminated with SIGTERM.
-        This can be fixed by installing a SIGTERM handler or by sending SIGINT prior to SIGTERM
+FIXME: Some servers have shutdown code which will never be reached as the server is terminated with SIGTERM. This can be fixed by installing a SIGTERM handler or by sending SIGINT prior to SIGTERM.
 """
 
 import sys
@@ -40,30 +39,31 @@ class Server(object):
     def address(self):
         return (self.interface, self.port)
     def wait_until_warmup(self, iterations=10, delay=1):
-        self.logger.info('Waiting for server warm-up...')
+        self.logger.info('waiting for server warm-up')
         for iteration in range(iterations):
             try:
                 handle = urllib2.urlopen('http://%s:%s' % (self.interface, self.port))
                 handle.read()
                 handle.close()
-                self.logger.info('Server responds OK to requests.')
+                self.logger.info('server responds OK to requests')
                 break
             except urllib2.URLError, error:
                 if not hasattr(error, 'reason') or type(error.reason) is not socket.error:
-                    self.logger.warning("Caught unexpected %s during warm-up of server." % (error.__class__.__name__,))
+                    self.logger.warning("caught unexpected %s during warm-up of server" %
+                                        (error.__class__.__name__,))
                 time.sleep(delay)
         else:
             self.shutdown()
-            raise ServerFailedToStart('Server failed to start. Aborting.', self.logger)
+            raise ServerFailedToStart('aborting, server failed to start', self.logger)
     def __enter__(self):
-        self.logger.info('Forking child process to run %s.' % (self,))
+        self.logger.info('forking child process to run %s' % (self,))
         self.server_pid = os.fork()
         if self.server_pid == 0:
             self.logger = logging.getLogger('server.child')
             os.setsid()
             self.start()
-            # NOTE: we must exit here to make sure we never execute past the main function of the tested
-            #        WSGI server
+            # NOTE: we must exit here to make sure we never execute past the main function of the
+            #        tested WSGI server
             raise SystemExit(0)
         else:
             if self.do_warmup_wait:
@@ -74,7 +74,7 @@ class Server(object):
     def shutdown(self):
         if self.server_pid is None:
             return
-        self.logger.info('Sending SIGTERM to server.')
+        self.logger.info('sending SIGTERM to server')
         os.kill(self.server_pid, signal.SIGTERM)
         self.server_pid = None
     def silence_spurious_logging(self, stdout=True, logger_names=()):
@@ -120,8 +120,8 @@ class CherryPy(Server):
     def start(self):
         from cherrypy import wsgiserver
         wsgi_apps = wsgiserver.WSGIPathInfoDispatcher([('/', wsgi_dispatcher)])
-        server = wsgiserver.CherryPyWSGIServer((self.interface, self.port), wsgi_apps, request_queue_size=500,
-                                               server_name=self.interface)
+        server = wsgiserver.CherryPyWSGIServer((self.interface, self.port), wsgi_apps,
+                                               request_queue_size=500, server_name=self.interface)
         self.logger.info('%r starting server...' % (self,))
         server.start()
         # FIXME: see module docstring
@@ -199,7 +199,7 @@ class Paste(Server):
         from paste import httpserver
         self.logger.info('%r serving...' % (self,))
         self.silence_spurious_logging(logger_names=('paste.httpserver.ThreadPool',))
-        httpserver.serve(wsgi_dispatcher, '%s:%s' % (self.interface, self.port), request_queue_size=500)
+        httpserver.serve(wsgi_dispatcher, '%s:%s' % (self.interface, self.port),
+                         request_queue_size=500)
 
-# TODO: remaining servers mentioned in Nicholas' original post: Aspen, Gunicorn, MagnumPy, Tornado, uWSGI
-#        and of course, mod_wsgi
+# TODO: remaining servers mentioned in Nicholas' original post: Aspen, Gunicorn, MagnumPy, Tornado, uWSGI and of course, mod_wsgi

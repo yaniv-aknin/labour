@@ -4,12 +4,13 @@ import sys
 import argparse
 import httplib
 from multiprocessing import cpu_count
+import logging
 
 from labour.servers import servers as servers_map
 from labour import client
 from labour import behaviours
 from labour import report
-from labour import log as log
+from labour import log
 from labour.errors import main_error_handler
 
 def parse_arguments(argv):
@@ -17,14 +18,15 @@ def parse_arguments(argv):
     parser.add_argument('-s', '--server', choices=servers_map, default='WSGIRef')
     parser.add_argument('-i', '--iterations', type=int, default=512)
     parser.add_argument('-p', '--number-processes', type=int, default=cpu_count())
+    log.add_argparse_verbosity_options(parser)
     options = parser.parse_args(argv)
     options.server = servers_map[options.server]
     return options
 
 @main_error_handler
 def main(argv):
-    log.setup_logging()
     options = parse_arguments(argv[1:])
+    log.setup_logging(options)
 
     driver = client.Client()
     driver.add_behaviour(behaviours.PlainResponse(), weight=98)

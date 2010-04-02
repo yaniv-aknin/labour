@@ -63,14 +63,18 @@ class Client(object):
         if iterations < number_processes or iterations % number_processes != 0:
             raise ValueError('can not divide %d iterations between %d processes')
         base = 'http://%s:%s' % (self.host, self.port,)
-        LOGGER.info('Beginning %s requests against %s using %d processes...' % (iterations, base, number_processes))
+        LOGGER.info('spawning %s requests against %s using %d processes' %
+                    (iterations, base, number_processes))
         results = multicall(self._execute, (base, self.behaviours, iterations / number_processes),
                             how_many=number_processes)
         self.statistics = sum(results, self.statistics)
-        LOGGER.info('Finished all requests.')
+        LOGGER.info('finished all requests')
         return self.statistics
     def _execute(self, base, behaviours, iterations):
-        LOGGER.info('process %d doing %d iterations' % (os.getpid(), iterations))
+        # NOTE: this will run in a child process
+        global LOGGER
+        LOGGER = logging.getLogger('client.%d' % (os.getpid(),))
+        LOGGER.debug('running %d iterations' % (iterations,))
         statistics = HTTPStatistics()
         for iteration in xrange(iterations):
             try:
