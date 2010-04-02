@@ -64,7 +64,7 @@ class Server(object):
             self.start()
             # NOTE: we must exit here to make sure we never execute past the main function of the
             #        tested WSGI server
-            raise SystemExit(0)
+            os._exit(0)
         else:
             if self.do_warmup_wait:
                 self.wait_until_warmup()
