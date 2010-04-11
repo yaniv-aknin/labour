@@ -42,29 +42,35 @@ class Server(object):
         self.logger.info('waiting for server warm-up')
         for iteration in range(iterations):
             try:
-                handle = urllib2.urlopen('http://%s:%s' % (self.interface, self.port))
+                handle = urllib2.urlopen('http://%s:%s' %
+                                         (self.interface, self.port))
                 handle.read()
                 handle.close()
                 self.logger.info('server responds OK to requests')
                 break
             except urllib2.URLError, error:
-                if not hasattr(error, 'reason') or type(error.reason) is not socket.error:
-                    self.logger.warning("caught unexpected %s during warm-up of server" %
+                if (not hasattr(error, 'reason') or
+                    type(error.reason) is not socket.error):
+                    self.logger.warning("caught unexpected %s during warm-up"
+                                        " of server" %
                                         (error.__class__.__name__,))
                 time.sleep(delay)
         else:
             self.shutdown()
-            raise ServerFailedToStart('aborting, server failed to start', self.logger)
+            raise ServerFailedToStart('aborting, server failed to start',
+                                      self.logger)
     def __enter__(self):
         self.logger.info('forking child process to run %s' % (self,))
         self.server_pid = os.fork()
         if self.server_pid == 0:
-            self.logger = logging.getLogger('server.child')
-            os.setsid()
-            self.start()
-            # NOTE: we must exit here to make sure we never execute past the main function of the
-            #        tested WSGI server
-            os._exit(0)
+            try:
+                self.logger = logging.getLogger('server.child')
+                os.setsid()
+                self.start()
+            finally:
+                # NOTE: we must exit here to make sure we never execute past
+                #        the main function of the tested WSGI server
+                os._exit(0)
         else:
             if self.do_warmup_wait:
                 self.wait_until_warmup()
