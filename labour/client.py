@@ -59,13 +59,17 @@ class Client(object):
         self.behaviours = []
     def add_behaviour(self, behaviours, weight):
         self.behaviours.extend([behaviours]*weight)
-    def execute(self, iterations=1, number_processes=1):
+    def divide_iterations(self, iterations, number_processes):
         if iterations < number_processes or iterations % number_processes != 0:
             raise ValueError('can not divide %d iterations between %d processes')
+        return iterations / number_processes
+    def execute(self, iterations=1, number_processes=1):
+        child_iterations = self.divide_iterations(iterations, number_processes)
         base = 'http://%s:%s' % (self.host, self.port,)
         LOGGER.info('spawning %s requests against %s using %d processes' %
                     (iterations, base, number_processes))
-        results = multicall(self._execute, (base, self.behaviours, iterations / number_processes),
+        results = multicall(self._execute,
+                            (base, self.behaviours, child_iterations),
                             how_many=number_processes)
         self.statistics = sum(results, self.statistics)
         LOGGER.info('finished all requests')

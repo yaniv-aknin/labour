@@ -1,7 +1,10 @@
 """
-This module contains the classes required to start various WSGI servers for the sake of a test.
+This module contains the classes required to start various WSGI servers
+for the sake of a test.
 
-FIXME: Some servers have shutdown code which will never be reached as the server is terminated with SIGTERM. This can be fixed by installing a SIGTERM handler or by sending SIGINT prior to SIGTERM.
+FIXME: Some servers have shutdown code which will never be reached as
+the server is terminated with SIGTERM. This can be fixed by installing
+a SIGTERM handler or by sending SIGINT prior to SIGTERM.
 """
 
 import sys
@@ -22,7 +25,8 @@ def exposed(cls):
     return cls
 
 class ServerFailedToStart(LabourException):
-    "Raised when we fail to receive a successful page delivery from the server during warmup time"
+    """Raised when we fail to receive a successful page delivery from the
+       server during warmup time"""
 
 class Server(object):
     def __init__(self, interface='127.0.0.1', port=8000, do_warmup_wait=True):
@@ -34,7 +38,8 @@ class Server(object):
     def __str__(self):
         return self.__class__.__name__
     def __repr__(self):
-        return '<%s on %s:%s>' % (self.__class__.__name__, self.interface, self.port,)
+        return '<%s on %s:%s>' % (self.__class__.__name__, self.interface,
+                                  self.port,)
     @property
     def address(self):
         return (self.interface, self.port)
@@ -84,7 +89,8 @@ class Server(object):
         os.kill(self.server_pid, signal.SIGTERM)
         self.server_pid = None
     def silence_spurious_logging(self, stdout=True, logger_names=()):
-        # HACK: cruft to silences servers which spuriously write to stdout or 'import logging'
+        # HACK: cruft to silences servers which spuriously write to stdout
+        #       or 'import logging'
         if stdout:
             os.dup2(os.open('/dev/null', os.O_WRONLY), 1)
         for logger_name in logger_names:

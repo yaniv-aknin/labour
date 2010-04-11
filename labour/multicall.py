@@ -1,11 +1,18 @@
-"""A bare-bones but effective way to run a target callable in parallel using multiple processes.
+"""A bare-bones but effective way to run a target callable in parallel
+using multiple processes.
 
 POSIX specific.
 
-The reason I opted to use this rather than 'import multiprocessing' is that multiprocessing uses threads to listen in the background for results returning on kids' sockets. If possible, I would rather not initialize the threading mechanism at all* and gain a bit more performance for my children.
+The reason I opted to use this rather than 'import multiprocessing' is
+that multiprocessing uses threads to listen in the background for
+results returning on kids' sockets. If possible, I would rather not
+initialize the threading mechanism at all* and gain a bit more
+performance for my children.
 
-* initializing the threading mechanism calls ceval.c:PyEval_InitThreads, which incurs overhead for many future operations;
-    avoiding threads altogether can gain visible performance increases, especially when doing locking intensive operations
+* initializing the threading mechanism calls ceval.c:PyEval_InitThreads,
+which incurs overhead for many future operations; avoiding threads
+altogether can gain visible performance increases, especially when
+doing locking intensive operations
 """
 
 __author__ = 'Yaniv Aknin (yaniv@aknin.name)'
@@ -20,13 +27,15 @@ NO_OPTIONS = 0
 class ExceptionsRaisedInChildren(Exception):
     pass
 
-def multicall(target, args=None, kwargs=None, how_many=None, permit_exceptions=False):
+def multicall(target, args=None, kwargs=None, how_many=None,
+              permit_exceptions=False):
     args = args or []
     kwargs = kwargs or {}
 
     pids, pipes = fork_children(target, args, kwargs, how_many)
     raw_results = read_raw_results_in_parallel(pipes)
-    # RANT: I used to think Unix terminology is funny... 'reap dead children' gets less funny.
+    # RANT: I used to think Unix terminology is funny...
+    #        as I get older, 'reap dead children' gets less funny.
     reap_dead_children(pids)
     return process_results(raw_results, permit_exceptions)
 
