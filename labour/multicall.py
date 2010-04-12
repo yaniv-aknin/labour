@@ -20,6 +20,7 @@ __author__ = 'Yaniv Aknin (yaniv@aknin.name)'
 import os
 from select import select
 from cPickle import dumps, loads
+import traceback
 
 # NOTE: makes waitpid() below more readable
 NO_OPTIONS = 0
@@ -85,6 +86,7 @@ def exec_child_and_never_return(write_fd, target, args, kwargs):
             result = target(*args, **kwargs)
         except Exception, error:
             result = error
+            result._traceback = traceback.format_exc()
         # NOTE: the following line may block if the parent buffer is full, that's cool with us
         os.write(write_fd, dumps(result))
     finally:
