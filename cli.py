@@ -29,14 +29,17 @@ def main(argv):
     log.setup_logging(options)
 
     driver = client.Client()
-    driver.add_behaviour(behaviours.PlainResponse(), weight=98)
-    driver.add_behaviour(behaviours.Sleeping(sleep_duration=0.5), weight=1)
-    driver.add_behaviour(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR), weight=1)
+    driver.add(behaviours.PlainResponse(), weight=98)
+    driver.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
+    driver.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR),
+               weight=1)
 
     with options.server() as server:
-        statistics = driver.execute(iterations=options.iterations, number_processes=options.number_processes)
+        statistics, duration = \
+            driver.execute(iterations=options.iterations,
+                           number_processes=options.number_processes)
 
-    report.PlainReport(statistics).emit('ascii')
+    report.PlainReport(statistics, duration).emit('ascii')
 
 if __name__ == '__main__':
     main(sys.argv)

@@ -1,7 +1,6 @@
 import random
-import signal
+import time
 import urllib2
-import urlparse
 import httplib
 import logging
 import os
@@ -28,10 +27,17 @@ class HTTPStatistics(object):
             error = str(error.code)
         elif isinstance(error, urllib2.URLError):
             error = error.reason
-            if isinstance(error, socket.error):
+            if isinstance(error, socket.timeout):
+                # NOTE: urlopen() times out with a URLError wrapping ai
+                #       socket.timeout
+                error = str(error)
+            elif isinstance(error, socket.error):
                 error = error.strerror
         elif isinstance(error, httplib.HTTPException):
             error = error.__class__.__name__
+        elif isinstance(error, socket.timeout):
+            # NOTE: adinfourl.read() times out with a bare socket.timeout
+            error = str(error)
         else:
             raise TypeError("%s is not a known error type"
                             % error.__class__)
@@ -66,15 +72,16 @@ class HTTPStatistics(object):
             map1[key] += value
 
 class Client(object):
-    def __init__(self, host='localhost', port=8000):
+    def __init__(self, host='localhost', port=8000, timeout_seconds=30):
         self.host = host
         self.port = port
+        self.timeout_seconds = 30
         self.statistics = HTTPStatistics()
         self.behaviours = []
     @property
     def base(self):
         return 'http://%s:%s' % (self.host, self.port,)
-    def add_behaviour(self, behaviours, weight):
+    def add(self, behaviours, weight):
         self.behaviours.extend([behaviours]*weight)
     def divide_iterations(self, iterations, number_processes):
         if iterations < number_processes or iterations % number_processes != 0:
@@ -82,13 +89,15 @@ class Client(object):
         return iterations / number_processes
     def execute(self, iterations=1, number_processes=1):
         child_iterations = self.divide_iterations(iterations, number_processes)
-        LOGGER.info('spawning %s requests against %s using %d processes' %
-                    (iterations, self.base, number_processes))
+        LOGGER.info('generating %s requests using %d processes' %
+                    (iterations, number_processes))
+        start_time = time.time()
         results = multicall(self._execute, (child_iterations,),
                             how_many=number_processes)
+        duration = time.time() - start_time
         self.statistics = sum(results, self.statistics)
         LOGGER.info('finished all requests')
-        return self.statistics
+        return self.statistics, duration
     def _execute(self, iterations):
         # NOTE: this will run in a child process
         global LOGGER
@@ -98,18 +107,19 @@ class Client(object):
         for iteration in xrange(iterations):
             # FIXME: use proper url joining
             behaviour = random.choice(self.behaviours)
-            result = self.hit(self.base + '/' + str(behaviour))
+            result = self.hit(self.base + '/' + str(behaviour),
+                              timeout=behaviour.timeout)
             if behaviour.is_expected_response(result):
                 statistics.success()
             else:
                 statistics.failure(result)
         return statistics
-    def hit(self, url):
+    def hit(self, url, timeout):
         try:
-            handle = urllib2.urlopen(url)
+            handle = urllib2.urlopen(url, timeout=timeout)
             handle.read()
             handle.close()
             return SUCCESS
         except (httplib.HTTPException, urllib2.HTTPError,
-                urllib2.URLError), error:
+                urllib2.URLError, socket.timeout), error:
             return error

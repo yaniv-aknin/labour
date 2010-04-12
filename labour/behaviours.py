@@ -27,6 +27,7 @@ def wsgi_dispatcher(environ, start_response):
     return behaviour.wsgi(environ, start_response, **behaviour_kwargs)
 
 class Behaviour(object):
+    DEFAULT_TIMEOUT = 30
     @staticmethod
     def make_plain_headers(content_length):
         return [('Content-type', 'text/plain'),
@@ -34,7 +35,8 @@ class Behaviour(object):
     @staticmethod
     def make_http_status(code):
         return '%d %s' % (code, httplib.responses[code])
-    def __init__(self, **kwargs):
+    def __init__(self, timeout=30, **kwargs):
+        self.timeout = timeout
         argspec = inspect.getargspec(self.wsgi)
         if argspec.defaults is not None:
             known_kwargs = argspec.args[-len(argspec.defaults):]

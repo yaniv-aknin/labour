@@ -4,10 +4,6 @@ import sys
 from functools import partial
 
 class BaseReport(object):
-    def __init__(self, *data):
-        self.data = data
-    def feed(self, datum):
-        self.data.append(datum)
     def emit(self, format, file=sys.stdout):
         try:
             emit_function = getattr(self, '_emit_%s' % (format,))
@@ -17,26 +13,26 @@ class BaseReport(object):
         return emit_function(file)
 
 class PlainReport(BaseReport):
-    def feed(self, datum):
-        if self.data:
-            raise ValueError("%s can only be fed once" % (self,))
-        super(PlainReport, self).feed(datum)
+    def __init__(self, statistics, duration):
+        self.statistics = statistics
+        self.duration = duration
     def _emit_ascii(self, file):
-        statistics = self.data[0]
+        statistics = self.statistics
         _print = partial(print, file=file)
-        _print("\nTest complete.")
-        success_percentage = (float(statistics.successes) /
-                              statistics.total_requests * 100)
-        failure_percentage = (float(statistics.failures) /
-                              statistics.total_requests * 100)
-        _print("Total requests sent: %d (%d (%.2f%%) returned OK and %d"
-               " (%.2f%%) had some failure." %
-               (statistics.total_requests, statistics.successes,
-                success_percentage, statistics.failures, failure_percentage))
+        _print("\nTest of %d requests complete in %.2f seconds (%.2freq/s)." %
+               (self.statistics.total_requests, self.duration,
+                self.statistics.total_requests / self.duration))
+        success_percentage = (float(self.statistics.successes) /
+                              self.statistics.total_requests * 100)
+        failure_percentage = (float(self.statistics.failures) /
+                              self.statistics.total_requests * 100)
+        _print("%d requests (%.2f%%) returned OK and %d (%.2f%%) failed."
+               % (self.statistics.successes, success_percentage,
+                  self.statistics.failures, failure_percentage))
         _print()
-        if statistics.failures:
+        if self.statistics.failures:
             _print("Failure Breakdown:")
-            for status, amount in statistics.response_histogram.iteritems():
+            for status, amount in self.statistics.response_histogram.items():
                 _print("Code: %s\tCount: %d\tPercentage: %.2f%%" %
                        (status, amount,
-                        float(amount) / statistics.failures * 100))
+                        float(amount) / self.statistics.failures * 100))
