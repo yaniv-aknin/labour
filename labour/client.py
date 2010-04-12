@@ -2,6 +2,7 @@ import random
 import signal
 import urllib2
 import urlparse
+import httplib
 import logging
 import os
 
@@ -16,6 +17,8 @@ class HTTPStatistics(object):
         self.unknown_exceptions = []
     def feed(self, error=None):
         self.total_requests += 1
+        if error is None:
+            return
         if not hasattr(error, 'code'):
             self.unknown_exceptions.append(error)
             return
@@ -57,6 +60,9 @@ class Client(object):
         self.port = port
         self.statistics = HTTPStatistics()
         self.behaviours = []
+    @property
+    def base(self):
+        return 'http://%s:%s' % (self.host, self.port,)
     def add_behaviour(self, behaviours, weight):
         self.behaviours.extend([behaviours]*weight)
     def divide_iterations(self, iterations, number_processes):
@@ -65,29 +71,30 @@ class Client(object):
         return iterations / number_processes
     def execute(self, iterations=1, number_processes=1):
         child_iterations = self.divide_iterations(iterations, number_processes)
-        base = 'http://%s:%s' % (self.host, self.port,)
         LOGGER.info('spawning %s requests against %s using %d processes' %
-                    (iterations, base, number_processes))
-        results = multicall(self._execute,
-                            (base, self.behaviours, child_iterations),
+                    (iterations, self.base, number_processes))
+        results = multicall(self._execute, (child_iterations,),
                             how_many=number_processes)
         self.statistics = sum(results, self.statistics)
         LOGGER.info('finished all requests')
         return self.statistics
-    def _execute(self, base, behaviours, iterations):
+    def _execute(self, iterations):
         # NOTE: this will run in a child process
         global LOGGER
         LOGGER = logging.getLogger('client.%d' % (os.getpid(),))
         LOGGER.debug('running %d iterations' % (iterations,))
         statistics = HTTPStatistics()
         for iteration in xrange(iterations):
-            try:
-                self.hit(base + '/' + str(random.choice(behaviours)))
-                statistics.feed()
-            except urllib2.URLError, error:
-                statistics.feed(error)
+            # FIXME: use proper url joining
+            behaviour = random.choice(self.behaviours)
+            result = self.hit(self.base + '/' + str(behaviour))
+            statistics.feed(result)
         return statistics
     def hit(self, url):
-        handle = urllib2.urlopen(url)
-        handle.read()
-        handle.close()
+        try:
+            handle = urllib2.urlopen(url)
+            handle.read()
+            handle.close()
+        except (httplib.HTTPException, urllib2.HTTPError,
+                urllib2.URLError), error:
+            return error
