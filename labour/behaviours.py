@@ -2,11 +2,14 @@ import sys
 import inspect
 import urlparse
 import urllib
+import urllib2
 import time
 import random
 import signal
 import os
 import httplib
+
+import labour.client
 
 behaviours = {}
 def behaviour(cls):
@@ -45,6 +48,10 @@ class Behaviour(object):
     def __str__(self):
         return "%s?%s" % (self.__class__.__name__,
                           urllib.urlencode(self.kwargs))
+    def is_expected_response(self, response):
+        if response is labour.client.SUCCESS:
+            return True
+        return False
 
 class _NoSuchBehaviour(Behaviour):
     @classmethod
@@ -63,6 +70,15 @@ class PlainResponse(Behaviour):
         start_response(cls.make_http_status(status),
                        cls.make_plain_headers(len(output)))
         yield output
+    def is_expected_response(self, response):
+        requested_http_status = self.kwargs.get('status', httplib.OK)
+        if (requested_http_status == httplib.OK and
+            response is labour.client.SUCCESS):
+            return True
+        if (isinstance(response, urllib2.HTTPError) and
+            response.code == requested_http_status):
+            return True
+        return False
 
 @behaviour
 class Sleeping(Behaviour):
@@ -125,6 +141,13 @@ class PythonWedge(Behaviour):
         start_response(cls.make_http_status(httplib.OK),
                        cls.make_plain_headers(len(output)))
         yield output
+    def is_expected_response(self, response):
+        # FIXME: not certain what's proper here, let's say anything of the
+        #         server error range makes sense and anything else is wrong
+        if (isinstance(response, urllib2.HTTPError) and
+            response.code >= 500 and response < 600):
+            return True
+        return False
 
 @behaviour
 class SIGSEGV(Behaviour):
@@ -138,3 +161,10 @@ class SIGSEGV(Behaviour):
         start_response(cls.make_http_status(httplib.OK),
                        cls.make_plain_headers(len(output)))
         yield output
+    def is_expected_response(self, response):
+        # FIXME: not certain what's proper here, let's say anything of the
+        #         server error range makes sense and anything else is wrong
+        if (isinstance(response, urllib2.HTTPError) and
+            response.code >= 500 and response < 600):
+            return True
+        return False

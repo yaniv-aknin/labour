@@ -5,26 +5,39 @@ import urlparse
 import httplib
 import logging
 import os
+import socket
 
 from labour.multicall import multicall
 
 LOGGER = logging.getLogger('client')
+SUCCESS = 'successful response'
 
 class HTTPStatistics(object):
     def __init__(self):
         self.total_requests = 0
         self.response_histogram = {}
-        self.unknown_exceptions = []
-    def feed(self, error=None):
+    def success(self):
         self.total_requests += 1
-        if error is None:
-            return
-        if not hasattr(error, 'code'):
-            self.unknown_exceptions.append(error)
-            return
-        if error.code not in self.response_histogram:
-            self.response_histogram[error.code] = 0
-        self.response_histogram[error.code] += 1
+    def failure(self, error):
+        self.total_requests += 1
+        # CRUFT: Slowly hack away at the exception into something we
+        #               can put in a histogram what a piece of shit.
+        if error is SUCCESS:
+            error = 'unexpected successful response'
+        elif isinstance(error, urllib2.HTTPError):
+            error = str(error.code)
+        elif isinstance(error, urllib2.URLError):
+            error = error.reason
+            if isinstance(error, socket.error):
+                error = error.strerror
+        elif isinstance(error, httplib.HTTPException):
+            error = error.__class__.__name__
+        else:
+            raise TypeError("%s is not a known error type"
+                            % error.__class__)
+        if error not in self.response_histogram:
+            self.response_histogram[error] = 0
+        self.response_histogram[error] += 1
     @property
     def successes(self):
         return self.total_requests - self.failures
@@ -38,14 +51,12 @@ class HTTPStatistics(object):
         result.total_requests = self.total_requests + other.total_requests
         result.response_histogram = dict(self.response_histogram)
         self._sum_update(result.response_histogram, other.response_histogram)
-        result.unkown_exception = self.unknown_exceptions + other.unknown_exceptions
         return result
     def __iadd__(self, other):
         if not isinstance(other, self.__class__):
             return NotImplemented
         self.total_requests += other.total_requests
         self._sum_update(self.response_histogram, other.response_histogram)
-        self.unknown_exceptions += other.unknown_exceptions
         return self
     @staticmethod
     def _sum_update(map1, map2):
@@ -88,13 +99,17 @@ class Client(object):
             # FIXME: use proper url joining
             behaviour = random.choice(self.behaviours)
             result = self.hit(self.base + '/' + str(behaviour))
-            statistics.feed(result)
+            if behaviour.is_expected_response(result):
+                statistics.success()
+            else:
+                statistics.failure(result)
         return statistics
     def hit(self, url):
         try:
             handle = urllib2.urlopen(url)
             handle.read()
             handle.close()
+            return SUCCESS
         except (httplib.HTTPException, urllib2.HTTPError,
                 urllib2.URLError), error:
             return error
