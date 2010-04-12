@@ -17,4 +17,4 @@ driver.add_behaviour(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERR
 with servers.WSGIRef() as server:
     statistics = driver.execute(iterations=512)
 
-report.trivial_report(statistics)
+report.PlainReport(statistics).emit('ascii')

@@ -36,7 +36,7 @@ def main(argv):
     with options.server() as server:
         statistics = driver.execute(iterations=options.iterations, number_processes=options.number_processes)
 
-    report.trivial_report(statistics)
+    report.PlainReport(statistics).emit('ascii')
 
 if __name__ == '__main__':
     main(sys.argv)
