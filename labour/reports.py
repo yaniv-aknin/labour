@@ -10,6 +10,8 @@ except ImportError:
                   UserWarning)
     prettytable = None
 
+DISQUALIFYING_FAILURE_PERCENTAGE = 10
+
 class BaseReport(object):
     def get_request_rate(self, result):
         return result.responses.total_requests / result.duration
@@ -71,8 +73,10 @@ class TableReport(BaseReport):
         _print("\nReport of request failure percent and requests/sec:")
         if prettytable is None:
             return self._emit_ugly_ascii(file)
-        table = prettytable.PrettyTable(["Server"] + self.test_names)
-        table.set_field_align("Server", "l")
+        columns = ["Server"] + self.test_names
+        table = prettytable.PrettyTable(columns)
+        for column in columns:
+            table.set_field_align(column, "l")
         for server_name, server_results in self.servers_results.items():
             row = [server_name]
             for result in server_results:
@@ -89,5 +93,7 @@ class TableReport(BaseReport):
                         self.format_result_tuple(result)))
     def format_result_tuple(self, result):
         failure_percentage = self.get_failure_percentage(result.responses)
+        if failure_percentage > DISQUALIFYING_FAILURE_PERCENTAGE:
+            return 'Failed'
         request_rate = self.get_request_rate(result)
-        return "f%%: %.2f; r/s: %.2f" % (failure_percentage, request_rate)
+        return "f%%: %.2f; RPS: %.2f" % (failure_percentage, request_rate)
