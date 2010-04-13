@@ -91,9 +91,11 @@ class Server(object):
     def silence_spurious_logging(self, stdout=True, logger_names=()):
         # HACK: cruft to silences servers which spuriously write to stdout
         #       or 'import logging'
+        devnull = open('/dev/null', 'w')
         if stdout:
-            os.dup2(os.open('/dev/null', os.O_WRONLY), 1)
+            os.dup2(devnull.fileno(), 1)
         for logger_name in logger_names:
             logging.getLogger(logger_name).setLevel(50)
+        return devnull
 
 # TODO: remaining servers mentioned in Nicholas' original post: Aspen, Gunicorn, MagnumPy, Tornado, uWSGI and of course, mod_wsgi

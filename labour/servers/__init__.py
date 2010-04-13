@@ -1,5 +1,5 @@
 supported_servers = ("WSGIRef", "Cogen", "Twisted", "Paster", "CherryPy",
-                     "FAPWS3", "Gevent")
+                     "FAPWS3", "Gevent", "Tornado", "Eventlet",)
 servers = {}
 
 for server_name in supported_servers:
