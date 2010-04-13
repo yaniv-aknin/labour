@@ -5,13 +5,16 @@ import httplib
 import logging
 import os
 import socket
+from collections import namedtuple
 
 from labour.multicall import multicall
+
+Result = namedtuple("Result", "responses, duration")
 
 LOGGER = logging.getLogger('client')
 SUCCESS = 'successful response'
 
-class HTTPStatistics(object):
+class Responses(object):
     def __init__(self):
         self.total_requests = 0
         self.response_histogram = {}
@@ -53,7 +56,7 @@ class HTTPStatistics(object):
     def __add__(self, other):
         if not isinstance(other, self.__class__):
             return NotImplemented
-        result = HTTPStatistics()
+        result = Responses()
         result.total_requests = self.total_requests + other.total_requests
         result.response_histogram = dict(self.response_histogram)
         self._sum_update(result.response_histogram, other.response_histogram)
@@ -76,13 +79,19 @@ class Client(object):
         self.host = host
         self.port = port
         self.timeout_seconds = 30
-        self.statistics = HTTPStatistics()
+        self.responses = Responses()
         self.behaviours = []
+    @classmethod
+    def from_behaviour_tuples(cls, *behaviour_tuples, **kwargs):
+        result = cls(**kwargs)
+        for behaviour, weight in behaviour_tuples:
+            result.add(behaviour, weight)
+        return result
     @property
     def base(self):
         return 'http://%s:%s' % (self.host, self.port,)
-    def add(self, behaviours, weight):
-        self.behaviours.extend([behaviours]*weight)
+    def add(self, behaviour, weight):
+        self.behaviours.extend([behaviour]*weight)
     def divide_iterations(self, iterations, number_processes):
         if iterations < number_processes or iterations % number_processes != 0:
             raise ValueError('can not divide %d iterations between %d processes')
@@ -95,25 +104,25 @@ class Client(object):
         results = multicall(self._execute, (child_iterations,),
                             how_many=number_processes)
         duration = time.time() - start_time
-        self.statistics = sum(results, self.statistics)
+        self.responses = sum(results, self.responses)
         LOGGER.info('finished all requests')
-        return self.statistics, duration
+        return Result(self.responses, duration)
     def _execute(self, iterations):
         # NOTE: this will run in a child process
         global LOGGER
         LOGGER = logging.getLogger('client.%d' % (os.getpid(),))
         LOGGER.debug('running %d iterations' % (iterations,))
-        statistics = HTTPStatistics()
+        responses = Responses()
         for iteration in xrange(iterations):
             # FIXME: use proper url joining
             behaviour = random.choice(self.behaviours)
             result = self.hit(self.base + '/' + str(behaviour),
                               timeout=behaviour.timeout)
             if behaviour.is_expected_response(result):
-                statistics.success()
+                responses.success()
             else:
-                statistics.failure(result)
-        return statistics
+                responses.failure(result)
+        return responses
     def hit(self, url, timeout):
         try:
             handle = urllib2.urlopen(url, timeout=timeout)

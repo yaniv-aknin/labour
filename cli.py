@@ -9,7 +9,7 @@ import logging
 from labour.servers import servers as servers_map
 from labour import client
 from labour import behaviours
-from labour import report
+from labour import reports
 from labour import log
 from labour.errors import main_error_handler
 
@@ -35,11 +35,10 @@ def main(argv):
                weight=1)
 
     with options.server() as server:
-        statistics, duration = \
-            driver.execute(iterations=options.iterations,
-                           number_processes=options.number_processes)
+        result = driver.execute(iterations=options.iterations,
+                                number_processes=options.number_processes)
 
-    report.PlainReport(statistics, duration).emit('ascii')
+    reports.PlainReport(result).emit('ascii')
 
 if __name__ == '__main__':
     main(sys.argv)
