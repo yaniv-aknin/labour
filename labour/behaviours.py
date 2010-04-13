@@ -4,7 +4,6 @@ import urlparse
 import urllib
 import urllib2
 import time
-import random
 import signal
 import os
 import httplib

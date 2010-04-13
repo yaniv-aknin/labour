@@ -4,7 +4,6 @@ import sys
 import argparse
 import httplib
 from multiprocessing import cpu_count
-import logging
 
 from labour.servers import servers as servers_map
 from labour import client
