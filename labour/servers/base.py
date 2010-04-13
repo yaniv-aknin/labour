@@ -29,11 +29,12 @@ class ServerFailedToStart(LabourException):
        server during warmup time"""
 
 class Server(object):
-    def __init__(self, interface='127.0.0.1', port=8000):
+    def __init__(self, interface='127.0.0.1', port=8000, do_warmup=True):
         self.interface = interface
         self.port = port
         self.server_pid = None
         self.logger = logging.getLogger('server.ctlr')
+        self.do_warmup = do_warmup
     def __str__(self):
         return self.__class__.__name__
     def __repr__(self):
@@ -71,7 +72,8 @@ class Server(object):
                 #        the main function of the tested WSGI server
                 os._exit(0)
         try:
-            self.wait_until_warmup()
+            if self.do_warmup:
+                self.wait_until_warmup()
         except:
             # NOTE: if we failed to warmup for whatever reason, the server's
             #        process was already forked and we must call __exit__()
