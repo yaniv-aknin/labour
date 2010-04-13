@@ -114,7 +114,7 @@ class Client(object):
         LOGGER.debug('running %d iterations' % (iterations,))
         responses = Responses()
         for iteration in xrange(iterations):
-            # FIXME: use proper url joining
+            # HACK: use proper url joining
             behaviour = random.choice(self.behaviours)
             result = hit(self.base + '/' + str(behaviour),
                          timeout=behaviour.timeout)

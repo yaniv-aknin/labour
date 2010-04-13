@@ -1,10 +1,6 @@
 """
 This module contains the classes required to start various WSGI servers
 for the sake of a test.
-
-FIXME: Some servers have shutdown code which will never be reached as
-the server is terminated with SIGTERM. This can be fixed by installing
-a SIGTERM handler or by sending SIGINT prior to SIGTERM.
 """
 
 import sys
@@ -97,5 +93,3 @@ class Server(object):
         for logger_name in logger_names:
             logging.getLogger(logger_name).setLevel(50)
         return devnull
-
-# TODO: remaining servers mentioned in Nicholas' original post: Aspen, Gunicorn, MagnumPy, Tornado, uWSGI and of course, mod_wsgi

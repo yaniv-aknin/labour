@@ -1,7 +1,57 @@
-labour is a suite of libraries and test-drivers to test web-servers under various stress conditions pertaining to misbehaving workers.
+OVERVIEW:
+Labour is a suite of libraries and test-drivers to test web-servers under various stress conditions pertaining to misbehaving workers.
 
-labour was written by Yaniv Aknin (yaniv@aknin.name).
+Labour was written by Yaniv Aknin (yaniv@aknin.name).
 
+USAGE:
+While I believe Labour can best be used as a library, you can use one of the per-written tests in './bin' to start playing around right now. The simplest test you can run is 'basic', but probably the more interesting one is 'multiserver'.
+
+Here's a sample exeuction of basic:
+    $ bin/basic 
+    Running basic test against WSGIRef.
+
+    Test of 512 requests complete in 8.37 seconds (61.16req/s).
+    512 requests (100.00%) returned OK and 0 (0.00%) failed.
+
+    $ 
+
+A small clarification about wording: when Labour says the request returned "OK" it means the request returned "as expected". Returning as expected is not the same thing as returning HTTP_OK (status 200). This is because some test behaviours can, for example, dictate the request should return with a status code of INTERNAL_SERVER_ERROR. Labour knows kind of result to expect, so if HTTP_OK was returned when INTERNAL_SERVER_ERROR was expected, this will be shown as a failure.
+
+CODE SAMPLE:
+    import sys
+    import argparse
+    import httplib
+
+    from labour import servers
+    from labour import client
+    from labour import behaviours
+    from labour import reports
+
+    driver = client.Client()
+    driver.add(behaviours.PlainResponse(), weight=98)
+    driver.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
+    driver.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR),
+                                        weight=1)
+
+    with servers.WSGIRef() as server:
+        result = driver.execute(iterations=512)
+
+    reports.PlainReport(result).emit('ascii')
+
+TODO: 
+ * Add support for more servers.
+   Aspen, Gunicorn, MagnumPy, uWSGI and of course, mod_wsgi
+ * Add pretty HTML output support to reports.
+ * Enrich server creation API (specify number of processes, etc).
+ * Shutdown servers with slowly escalating signals: SIGINT -> SIGTERM -> SIGKILL.
+ * Have more behaviour choice patterns other than Random. For example, allow
+    configured behaviours to be used in a predictable, endless round-robin
+    sequence.
+ * Research occasional very-low failure rate of some servers;
+    (I suspect it's my bug, not theirs)
+ * Grep source for FIXME (and HACK!) and resolve them all :)
+
+ACKNOWLEDGEMENTS:
 This software was inspired by a blog post by Ian Bicking (http://blog.ianbicking.org/2010/03/16/web-server-benchmarking-we-need/) but is in no way affiliated with him.
 
 This software contains trivial server wiring code-fragments by Nicholas Piel, as published here (http://nichol.as/benchmark-of-python-web-servers), but is in no way affiliated with him.
