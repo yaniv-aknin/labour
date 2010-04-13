@@ -8,7 +8,7 @@ import signal
 import os
 import httplib
 
-import labour.client
+import labour.http_hit
 
 behaviours = {}
 def behaviour(cls):
@@ -50,7 +50,7 @@ class Behaviour(object):
         return "%s?%s" % (self.__class__.__name__,
                           urllib.urlencode(self.kwargs))
     def is_expected_response(self, response):
-        if response is labour.client.SUCCESS:
+        if response is labour.http_hit.SUCCESS:
             return True
         return False
 
@@ -74,7 +74,7 @@ class PlainResponse(Behaviour):
     def is_expected_response(self, response):
         requested_http_status = self.kwargs.get('status', httplib.OK)
         if (requested_http_status == httplib.OK and
-            response is labour.client.SUCCESS):
+            response is labour.http_hit.SUCCESS):
             return True
         if (isinstance(response, urllib2.HTTPError) and
             response.code == requested_http_status):

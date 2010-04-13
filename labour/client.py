@@ -8,11 +8,11 @@ import socket
 from collections import namedtuple
 
 from labour.multicall import multicall
+from labour.http_hit import hit, SUCCESS
 
 Result = namedtuple("Result", "responses, duration")
 
 LOGGER = logging.getLogger('client')
-SUCCESS = 'successful response'
 
 class Responses(object):
     def __init__(self):
@@ -116,19 +116,10 @@ class Client(object):
         for iteration in xrange(iterations):
             # FIXME: use proper url joining
             behaviour = random.choice(self.behaviours)
-            result = self.hit(self.base + '/' + str(behaviour),
-                              timeout=behaviour.timeout)
+            result = hit(self.base + '/' + str(behaviour),
+                         timeout=behaviour.timeout)
             if behaviour.is_expected_response(result):
                 responses.success()
             else:
                 responses.failure(result)
         return responses
-    def hit(self, url, timeout):
-        try:
-            handle = urllib2.urlopen(url, timeout=timeout)
-            handle.read()
-            handle.close()
-            return SUCCESS
-        except (httplib.HTTPException, urllib2.HTTPError,
-                urllib2.URLError, socket.timeout), error:
-            return error
