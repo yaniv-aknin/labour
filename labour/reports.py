@@ -73,7 +73,7 @@ class TableReport(BaseReport):
         _print("\nReport of request failure percent and requests/sec:")
         if prettytable is None:
             return self._emit_ugly_ascii(file)
-        columns = ["Server"] + self.test_names
+        columns = ["Server"] + list(self.test_names)
         table = prettytable.PrettyTable(columns)
         for column in columns:
             table.set_field_align(column, "l")
