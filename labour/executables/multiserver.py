@@ -7,6 +7,8 @@ from multiprocessing import cpu_count
 
 from labour import servers
 from labour.servers import servers as servers_map
+from labour.servers.cli import MultiServerChoice
+from labour.servers import WSGIRef
 from labour import client
 from labour import behaviours
 from labour import reports
@@ -40,7 +42,7 @@ def main(argv):
 def parse_arguments(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-s', '--servers', choices=servers_map, action='append', default=[],
+        '-s', '--servers', action=MultiServerChoice, default=[],
         help="Choose servers to run against (default: all)"
     )
     parser.add_argument('-i', '--iterations', type=int, default=100,
@@ -50,9 +52,6 @@ def parse_arguments(argv):
     options = parser.parse_args(argv)
     if not options.servers:
         options.servers = servers_map.values()
-    else:
-        options.servers = [servers_map[server_name] for
-                           server_name in options.servers]
     return options
 
 def make_test_cases():
