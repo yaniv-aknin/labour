@@ -24,6 +24,10 @@ class ServerFailedToStart(LabourException):
     """Raised when we fail to receive a successful page delivery from the
        server during warmup time"""
 
+class ServerFailedToExit(Exception):
+    """Raised when we signalled the server and it failed to exit, should
+       be raised and caught only inside the module."""
+
 class Server(object):
     def __init__(self, interface='127.0.0.1', port=8000, do_warmup=True):
         self.interface = interface
@@ -39,22 +43,6 @@ class Server(object):
     @property
     def address(self):
         return (self.interface, self.port)
-    def wait_until_warmup(self, iterations=20, delay=0.5):
-        self.logger.info('waiting for server warm-up')
-        for iteration in range(iterations):
-            # NOTE: give server time to start
-            time.sleep(delay)
-            result = hit('http://%s:%s' % (self.interface, self.port),
-                         timeout=1)
-            if result is SUCCESS:
-                self.logger.info('server responds OK to requests')
-                break
-            if type(getattr(result, 'reason', None)) is socket.error:
-               continue
-            self.logger.warning("caught unexpected %s during warm-up of server" %
-                                (result.__class__.__name__,))
-        else:
-            raise ServerFailedToStart('server failed to start', self.logger)
     def __enter__(self):
         self.logger.info('forking child process to run %s' % (self,))
         self.server_pid = os.fork()
@@ -77,13 +65,40 @@ class Server(object):
             self.__exit__(*sys.exc_info())
             raise
         return self
+    def wait_until_warmup(self, iterations=20, delay=0.5):
+        self.logger.info('waiting for server warm-up')
+        time.sleep(delay)
+        wait_while_predicate(
+            lambda: not self.is_server_responding(), iterations=iterations,
+            delay=delay,
+            error=ServerFailedToStart('server failed to start', self.logger),
+        )
+    def is_server_responding(self):
+        result = hit('http://%s:%s' % (self.interface, self.port), timeout=1)
+        if result is SUCCESS:
+            self.logger.info('server responds OK to requests')
+            return True
+        if type(getattr(result, 'reason', None)) is not socket.error:
+            self.logger.warning("caught unexpected %s during warm-up of server"
+                                % (result.__class__.__name__,))
+        return False
     def __exit__(self, error_type, error_value, traceback):
-        self.logger.info('sending SIGTERM to server')
-        os.kill(self.server_pid, signal.SIGTERM)
-        # FIXME: potential deadlock if the server does not die on SIGTERM
-        waited_pid, status = os.waitpid(self.server_pid, NO_OPTIONS)
-        assert waited_pid == self.server_pid, 'waited for unexpected waitable'
-        self.server_pid = None
+        msg = "server at pid %d does not die, giving up" % (self.server_pid,)
+        for signal_name in ("SIGINT", "SIGTERM", "SIGKILL"):
+            try:
+                self.kill_server_and_wait_for_exit(signal_name)
+                self.server_pid = None
+                return
+            except ServerFailedToExit:
+                pass
+        self.logger.error(msg)
+    def kill_server_and_wait_for_exit(self, signal_name):
+        self.logger.info('sending %s to server' % (signal_name,))
+        os.kill(self.server_pid, getattr(signal, signal_name))
+        wait_while_predicate(
+            lambda: is_child_still_alive(self.server_pid), iterations=10,
+            delay=0.5, error=ServerFailedToExit()
+        )
     def silence_spurious_logging(self, stdout=True, logger_names=()):
         # HACK: cruft to silences servers which spuriously write to stdout
         #       or 'import logging'
@@ -93,3 +108,13 @@ class Server(object):
         for logger_name in logger_names:
             logging.getLogger(logger_name).setLevel(50)
         return devnull
+
+def wait_while_predicate(predicate, iterations, delay, error):
+    while predicate():
+        if iterations == 0:
+            raise error
+        iterations -= 1
+        time.sleep(delay)
+
+def is_child_still_alive(pid):
+    return os.waitpid(pid, os.WNOHANG)[0] == 0

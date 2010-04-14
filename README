@@ -63,7 +63,6 @@ TODO:
    Aspen, Gunicorn, MagnumPy, uWSGI and of course, mod_wsgi
  * Add pretty HTML output support to reports.
  * Enrich server creation API (specify number of processes, etc).
- * Shutdown servers with slowly escalating signals: SIGINT -> SIGTERM -> SIGKILL.
  * Have more behaviour choice patterns other than Random. For example, allow
     configured behaviours to be used in a predictable, endless round-robin
     sequence.
