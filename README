@@ -63,9 +63,6 @@ TODO:
    Aspen, Gunicorn, MagnumPy, uWSGI and of course, mod_wsgi
  * Add pretty HTML output support to reports.
  * Enrich server creation API (specify number of processes, etc).
- * Have more behaviour choice patterns other than Random. For example, allow
-    configured behaviours to be used in a predictable, endless round-robin
-    sequence.
  * Research occasional very-low failure rate of some servers;
     (I suspect it's my bug, not theirs)
  * Grep source for FIXME (and HACK!) and resolve them all :)

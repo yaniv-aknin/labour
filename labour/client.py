@@ -1,4 +1,3 @@
-import random
 import time
 import urllib2
 import httplib
@@ -7,6 +6,7 @@ import os
 import socket
 from collections import namedtuple
 
+from labour import policies
 from labour.multicall import multicall
 from labour.http_hit import hit, SUCCESS
 
@@ -75,12 +75,14 @@ class Responses(object):
             map1[key] += value
 
 class Client(object):
-    def __init__(self, host='localhost', port=8000, timeout_seconds=30):
+    def __init__(self, host='localhost', port=8000, timeout_seconds=30,
+                 policy=policies.Random):
         self.host = host
         self.port = port
         self.timeout_seconds = 30
         self.responses = Responses()
         self.behaviours = []
+        self.policy = policy
     @classmethod
     def from_behaviour_tuples(cls, *behaviour_tuples, **kwargs):
         result = cls(**kwargs)
@@ -102,22 +104,21 @@ class Client(object):
                     (iterations, number_processes))
         start_time = time.time()
         results = multicall(self._execute, (child_iterations,),
-                            how_many=number_processes)
+                            how_many=number_processes, pass_child_numbers=True)
         duration = time.time() - start_time
         self.responses = sum(results, self.responses)
         LOGGER.info('finished all requests')
         return Result(self.responses, duration)
-    def _execute(self, iterations):
+    def _execute(self, iterations, child_numbers):
         # NOTE: this will run in a child process
         global LOGGER
-        # NOTE: reseed RNG, so not all kids will use parent's seed
-        random.seed()
         LOGGER = logging.getLogger('client.%d' % (os.getpid(),))
         LOGGER.debug('running %d iterations' % (iterations,))
         responses = Responses()
+        behaviour_iterator = iter(self.policy(self.behaviours, child_numbers))
         for iteration in xrange(iterations):
             # HACK: use proper url joining
-            behaviour = random.choice(self.behaviours)
+            behaviour = behaviour_iterator.next()
             result = hit(self.base + '/' + str(behaviour),
                          timeout=behaviour.timeout)
             if behaviour.is_expected_response(result):

@@ -21,6 +21,9 @@ import os
 from select import select
 from cPickle import dumps, loads
 import traceback
+from collections import namedtuple
+
+ChildNumbers = namedtuple("ChildNumbers", "current, total")
 
 # NOTE: makes waitpid() below more readable
 NO_OPTIONS = 0
@@ -29,22 +32,26 @@ class ExceptionsRaisedInChildren(Exception):
     pass
 
 def multicall(target, args=None, kwargs=None, how_many=None,
-              permit_exceptions=False):
+              permit_exceptions=False, pass_child_numbers=False):
     args = args or []
     kwargs = kwargs or {}
 
-    pids, pipes = fork_children(target, args, kwargs, how_many)
+    pids, pipes = fork_children(target, args, kwargs, how_many,
+                                pass_child_numbers)
     raw_results = read_raw_results_in_parallel(pipes)
     # RANT: I used to think Unix terminology is funny...
     #        as I get older, 'reap dead children' gets less funny.
     reap_dead_children(pids)
     return process_results(raw_results, permit_exceptions)
 
-def fork_children(target, args, kwargs, how_many):
+def fork_children(target, args, kwargs, how_many, pass_child_numbers):
     pids = []
     pipes = {}
-    for iterator in xrange(how_many):
+    for number in xrange(how_many):
         read_fd, write_fd = os.pipe()
+        if pass_child_numbers:
+            kwargs = dict(kwargs)
+            kwargs['child_numbers'] = ChildNumbers(current=number, total=how_many)
         pid = os.fork()
         if pid == 0:
             os.close(read_fd)

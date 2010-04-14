@@ -9,6 +9,7 @@ from labour import servers
 from labour.servers import servers as servers_map
 from labour.servers.cli import MultiServerChoice
 from labour.servers import WSGIRef
+from labour.policies import policies as policies_map
 from labour import client
 from labour import behaviours
 from labour import reports
@@ -18,7 +19,7 @@ from labour.errors import main_error_handler
 def main(argv):
     options = parse_arguments(argv[1:])
 
-    test_cases = make_test_cases()
+    test_cases = make_test_cases(options)
     report = reports.TableReport(test_names=test_cases)
 
     for server_class in options.servers:
@@ -49,12 +50,15 @@ def parse_arguments(argv):
                         help="How many requests to issue per server per test")
     parser.add_argument('-p', '--number-processes', type=int, default=cpu_count(),
                         help="How many request-generators to fork in parallel")
+    parser.add_argument('-P', '--policy', choices=policies_map,
+                        default="Random", help="Behaviour selection policy")
     options = parser.parse_args(argv)
     if not options.servers:
         options.servers = servers_map.values()
+    options.policy = policies_map[options.policy]
     return options
 
-def make_test_cases():
+def make_test_cases(options):
     # HACK: I want Ubuntu Claus to bring me Python 2.7 installed by default...
     try:
         from collections import OrderedDict as mapping_class
@@ -62,19 +66,23 @@ def make_test_cases():
         mapping_class = dict
     result = mapping_class()
     result["Plain"] = client.Client.from_behaviour_tuples(
-            (behaviours.PlainResponse(), 99),
-            (behaviours.PlainResponse(status=httplib.NOT_FOUND), 1)
+        (behaviours.PlainResponse(), 99),
+        (behaviours.PlainResponse(status=httplib.NOT_FOUND), 1),
+        policy=options.policy,
     )
     result["Light Sleep"] = client.Client.from_behaviour_tuples(
-            (behaviours.PlainResponse(), 99),
-            (behaviours.Sleeping(sleep_duration=0.5), 1),
+        (behaviours.PlainResponse(), 99),
+        (behaviours.Sleeping(sleep_duration=0.5), 1),
+        policy=options.policy,
     )
     result["Heavy Sleep"] = client.Client.from_behaviour_tuples(
-            (behaviours.PlainResponse(), 95),
-            (behaviours.Sleeping(sleep_duration=2), 5),
+        (behaviours.PlainResponse(), 95),
+        (behaviours.Sleeping(sleep_duration=2), 5),
+        policy=options.policy,
     )
     result["SIGSEGV"] = client.Client.from_behaviour_tuples(
-                (behaviours.PlainResponse(), 50),
-                (behaviours.SIGSEGV(), 50),
+        (behaviours.PlainResponse(), 50),
+        (behaviours.SIGSEGV(), 50),
+        policy=options.policy,
     )
     return result
