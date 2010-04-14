@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import time
 import sys
 import argparse
@@ -59,6 +57,3 @@ def run_test(options):
                                 number_processes=options.number_processes)
 
     reports.PlainReport(result).emit('ascii')
-
-if __name__ == '__main__':
-    main(sys.argv)

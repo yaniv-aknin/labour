@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from __future__ import print_function
 
 import sys
@@ -24,9 +22,13 @@ test_cases = {
         (behaviours.PlainResponse(), 95),
         (behaviours.Sleeping(sleep_duration=2), 5),
     ),
+    "SIGSEGV": client.Client.from_behaviour_tuples(
+            (behaviours.PlainResponse(), 50),
+            (behaviours.SIGSEGV(), 50),
+    )
 }
 
-server_classes = [servers.WSGIRef, servers.Paste]
+server_classes = [servers.WSGIRef, servers.Paster]
 
 report = reports.TableReport(test_names=test_cases.keys())
 
