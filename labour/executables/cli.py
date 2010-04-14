@@ -6,9 +6,8 @@ from multiprocessing import cpu_count
 
 from labour.servers.cli import ServerChoice
 from labour.servers import WSGIRef
-from labour import client
+from labour import tester
 from labour import behaviours
-from labour.policies import policies as policies_map
 from labour import reports
 from labour import log
 from labour.errors import main_error_handler
@@ -25,11 +24,13 @@ def parse_arguments(argv):
                         " responding")
     parser.add_argument('-N', '--no-test', action="store_true",
                         help="Just run the server and block")
-    parser.add_argument('-P', '--policy', choices=policies_map,
-                        default='Random', help="Behaviour selection policy")
+    parser.add_argument('-P', '--policy', choices=tester.policy_map,
+                        default=tester.policies.Random,
+                        help="Behaviour selection policy")
     log.add_argparse_verbosity_options(parser)
     options = parser.parse_args(argv)
-    options.policy = policies_map[options.policy]
+    if options.policy in tester.policy_map:
+        options.policy = tester.policy_map[options.policy]
     return options
 
 @main_error_handler
@@ -50,14 +51,14 @@ def run_server(options):
         raw_input("Hit [Return] to exit.")
 
 def run_test(options):
-    driver = client.Client(policy=options.policy)
-    driver.add(behaviours.PlainResponse(), weight=98)
-    driver.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
-    driver.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR),
+    client = tester.Client(policy=options.policy)
+    client.add(behaviours.PlainResponse(), weight=98)
+    client.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
+    client.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR),
                weight=1)
 
     with options.server(do_warmup=options.warmup):
-        result = driver.execute(iterations=options.iterations,
+        result = client.execute(iterations=options.iterations,
                                 number_processes=options.number_processes)
 
     reports.PlainReport(result).emit('ascii')

@@ -30,5 +30,5 @@ class Repeat(Policy):
             for beheaviour in self.behaviours:
                 yield beheaviour
 
-policies = dict((policy.__name__, policy)
-                for policy in Policy.__subclasses__())
+policy_map = dict((policy.__name__, policy)
+                  for policy in Policy.__subclasses__())

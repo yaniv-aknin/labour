@@ -6,11 +6,8 @@ import httplib
 from multiprocessing import cpu_count
 
 from labour import servers
-from labour.servers import servers as servers_map
 from labour.servers.cli import MultiServerChoice
-from labour.servers import WSGIRef
-from labour.policies import policies as policies_map
-from labour import client
+from labour import tester
 from labour import behaviours
 from labour import reports
 from labour.errors import main_error_handler
@@ -50,12 +47,14 @@ def parse_arguments(argv):
                         help="How many requests to issue per server per test")
     parser.add_argument('-p', '--number-processes', type=int, default=cpu_count(),
                         help="How many request-generators to fork in parallel")
-    parser.add_argument('-P', '--policy', choices=policies_map,
-                        default="Random", help="Behaviour selection policy")
+    parser.add_argument('-P', '--policy', choices=tester.policy_map,
+                        default=tester.policies.Random,
+                        help="Behaviour selection policy")
     options = parser.parse_args(argv)
     if not options.servers:
-        options.servers = servers_map.values()
-    options.policy = policies_map[options.policy]
+        options.servers = servers.server_map.values()
+    if options.policy in tester.policy_map:
+        options.policy = tester.policy_map[options.policy]
     return options
 
 def make_test_cases(options):
@@ -65,22 +64,22 @@ def make_test_cases(options):
     except ImportError:
         mapping_class = dict
     result = mapping_class()
-    result["Plain"] = client.Client.from_behaviour_tuples(
+    result["Plain"] = tester.Client.from_behaviour_tuples(
         (behaviours.PlainResponse(), 99),
         (behaviours.PlainResponse(status=httplib.NOT_FOUND), 1),
         policy=options.policy,
     )
-    result["Light Sleep"] = client.Client.from_behaviour_tuples(
+    result["Light Sleep"] = tester.Client.from_behaviour_tuples(
         (behaviours.PlainResponse(), 99),
         (behaviours.Sleeping(sleep_duration=0.5), 1),
         policy=options.policy,
     )
-    result["Heavy Sleep"] = client.Client.from_behaviour_tuples(
+    result["Heavy Sleep"] = tester.Client.from_behaviour_tuples(
         (behaviours.PlainResponse(), 95),
         (behaviours.Sleeping(sleep_duration=2), 5),
         policy=options.policy,
     )
-    result["SIGSEGV"] = client.Client.from_behaviour_tuples(
+    result["SIGSEGV"] = tester.Client.from_behaviour_tuples(
         (behaviours.PlainResponse(), 50),
         (behaviours.SIGSEGV(), 50),
         policy=options.policy,
