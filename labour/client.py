@@ -110,6 +110,8 @@ class Client(object):
     def _execute(self, iterations):
         # NOTE: this will run in a child process
         global LOGGER
+        # NOTE: reseed RNG, so not all kids will use parent's seed
+        random.seed()
         LOGGER = logging.getLogger('client.%d' % (os.getpid(),))
         LOGGER.debug('running %d iterations' % (iterations,))
         responses = Responses()
