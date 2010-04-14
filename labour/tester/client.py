@@ -1,3 +1,6 @@
+"""Issue lots of HTTP requests in parallel, chosen from a pool of
+possible Behaviours according to some Policy."""
+
 import logging
 import time
 import os
@@ -11,6 +14,14 @@ import policies
 LOGGER = logging.getLogger('client')
 
 class Client(object):
+    """This class ties together the client-side of Labour. You register
+    a Policy and one or more Behaviours with it, and it will dispatch
+    HTTP requests chosen from among the Behaviours according to the
+    Policy.
+
+    Some of this class (the _execute method) is meant to be executed
+    in parallel in several forked processes and return pickled results
+    to back to parent process."""
     def __init__(self, host='localhost', port=8000, timeout_seconds=30,
                  policy=policies.Random):
         self.host = host

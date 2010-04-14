@@ -1,3 +1,5 @@
+"Various logging-related utility functions."
+
 import logging
 
 import labour

@@ -1,3 +1,9 @@
+"""This module is in charge of reporting the results of a test or a
+series of tests after they are finished.
+
+This module relies on the prettytable package (sudo apt-get install
+python-prettytable), but has an 'uglytable' implementation if that's
+not found."""
 from __future__ import print_function
 
 import sys

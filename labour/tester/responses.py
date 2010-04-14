@@ -1,3 +1,6 @@
+"""Responses objects aggregate the information gathered from all the
+HTTP responses received from the server so far."""
+
 import urllib2
 import socket
 import httplib
@@ -5,12 +8,22 @@ import httplib
 from ..http_hit import SUCCESS
 
 class Responses(object):
+    """Responses objects aggregate the information gathered from all the
+    HTTP responses received from the server so far.
+    
+    Responses objects can be added to one another; this feature is used
+    to combine the Responses' objects received from several child
+    processes into a single Responses objects to pass to reporting."""
     def __init__(self):
         self.total_requests = 0
         self.response_histogram = {}
     def success(self):
         self.total_requests += 1
     def failure(self, error):
+        """A long and tedious method, mostly dictated by urllib2's
+        horrors, which receives an exception instance and stores
+        a reasonably canonical error message/code in a histogram
+        of errors that occured."""
         self.total_requests += 1
         # CRUFT: Slowly hack away at the exception into something we
         #               can put in a histogram what a piece of shit.

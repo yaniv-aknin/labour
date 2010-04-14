@@ -1,3 +1,5 @@
+"Implementation of Behaviours; the heart of the Labour framework."
+
 import sys
 import inspect
 import urlparse
@@ -16,6 +18,11 @@ def behaviour(cls):
     return cls
 
 def wsgi_dispatcher(environ, start_response):
+    """This is a plain dispatching function which extract the name of
+    desired Behaviour as well as additional paramters from the HTTP
+    Request. After the Behaviour returns (if at all, some Behaviours
+    hang or kill the process), this function uses WSGI to return the
+    result to the client."""
     # HACK: parsing the path manually here, the correct way is to use a
     #        something like python-routes
     first_path_element = environ.get('PATH_INFO', '').strip('/').split('/')[0]
@@ -26,6 +33,23 @@ def wsgi_dispatcher(environ, start_response):
     return behaviour.wsgi(environ, start_response, **behaviour_kwargs)
 
 class Behaviour(object):
+    """Behaviours are dual-purpose classes which run both as part of the
+    WSGI application under the WSGI Server as well as under the Client
+    object which dispatches requests to test the server.
+
+    When invoked inside the WSGI Application, Behaviours classes receive
+    certain parameters from the HTTP request and perform some detrimental
+    task (such as leaking resources or sleeping) prior to using the WSGI
+    API in order to return an HTTP response to the client.
+     -> See the 'wsgi' classmethod of Behaviours.
+
+    Inside the Client Behaviour objects are instantiated with certain
+    parameters which are then sent to the server as an HTTP request and
+    affect the operation of the Behaviour inside the server. When the
+    HTTP response returns from the server, the Behaviour instance which
+    caused that HTTP response to be generated will validate that the
+    response is as-expected.
+    """
     DEFAULT_TIMEOUT = 30
     @staticmethod
     def make_plain_headers(content_length):

@@ -1,6 +1,11 @@
+"""Policies are endless iterators that yield one Behaviour at a time
+from a weighted sequence of Behaviours. Each policy chooses the next
+Behaviour to yield according to its own algorithm."""
+
 import random
 
 class Policy(object):
+    "The base class for all Policies."
     def __init__(self, behaviours, child_numbers):
         self.behaviours = behaviours
         self.child_numbers = child_numbers
@@ -10,6 +15,7 @@ class Policy(object):
         raise StopIteration()
 
 class Random(Policy):
+    "Yield Behaviours at Random."
     def __init__(self, behaviours, child_numbers):
         super(Random, self).__init__(behaviours, child_numbers)
         # NOTE: reseed our RNG after we inherited a seed from the parent
@@ -18,6 +24,12 @@ class Random(Policy):
         return random.choice(self.behaviours)
 
 class Repeat(Policy):
+    """Yield Behaviours in the same order they appear in the behaviour
+    sequence with which the class was initialized. The Repeat policy
+    receives the number of the child process in which it is running
+    and the total number of processes running in parallel. This
+    information is used to roll the behaviour sequence thus that each
+    child will start at a separate index in the sequence."""
     def __init__(self, behaviours, child_numbers):
         super(Repeat, self).__init__(behaviours, child_numbers)
         total_behaviours = len(self.behaviours)

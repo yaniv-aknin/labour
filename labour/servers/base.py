@@ -1,21 +1,15 @@
-"""
-This module contains the classes required to start various WSGI servers
-for the sake of a test.
-"""
+"WSGI Server forking base class and utility functions."
 
 import sys
 import os
 import signal
 import logging
-import urllib2
-import httplib
 import time
-import warnings
 import socket
 
-from ..behaviours import wsgi_dispatcher
 from ..errors import LabourException
 from ..http_hit import hit, SUCCESS
+from ..behaviours import wsgi_dispatcher
 
 # NOTE: makes waitpid() below more readable
 NO_OPTIONS = 0
@@ -29,6 +23,12 @@ class ServerFailedToExit(Exception):
        be raised and caught only inside the module."""
 
 class Server(object):
+    """This class is a context manager which handles running an
+    arbitrary function (meant to be the WSGI Server's start() function
+    in a forked process. This class mainly has server-orthogonal process
+    forking and shutdown code, as well as the capability to "warmup" a
+    server - poll it with dummy requests until it first responds.
+    """
     def __init__(self, interface='127.0.0.1', port=8000, do_warmup=True):
         self.interface = interface
         self.port = port
@@ -110,6 +110,9 @@ class Server(object):
         return devnull
 
 def wait_while_predicate(predicate, iterations, delay, error):
+    """General purpose function to wait as long as predicate() is True,
+    for up to iterations iterations, waiting delay seconds between each
+    predicate evaluation and raising error in case of a timeout."""
     while predicate():
         if iterations == 0:
             raise error

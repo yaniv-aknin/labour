@@ -1,3 +1,6 @@
+"""Various utility functions for choosing a server from the known
+server map using argparse Actions."""
+
 import argparse
 
 from ..servers import server_map

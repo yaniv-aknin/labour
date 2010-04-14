@@ -1,6 +1,10 @@
+"Error handling related stuff."
+
 import logging
 
 class LabourException(Exception):
+    """The base class of all Labour exceptions which may reach main()
+       and cause program termination."""
     def __init__(self, msg, logger):
         self.msg = msg
         self.logger = logger
@@ -8,6 +12,7 @@ class LabourException(Exception):
         self.logger.error(self.msg)
 
 def main_error_handler(main_function):
+    "A decorator for the main() function, does graceful handling of errors."
     def callable(*args, **kwargs):
         try:
             main_function(*args, **kwargs)
