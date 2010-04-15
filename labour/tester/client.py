@@ -51,6 +51,8 @@ class Client(object):
             raise ValueError('can not divide %d iterations between %d processes')
         return iterations / number_processes
     def execute(self, iterations=1, number_processes=1):
+        if not self.behaviours:
+            raise ValueError("Can not run a client with no added Behaviours")
         child_iterations = self.divide_iterations(iterations, number_processes)
         LOGGER.info('generating %s requests using %d processes' %
                     (iterations, number_processes))
