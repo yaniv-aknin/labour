@@ -4,6 +4,11 @@ possible Behaviours according to some Policy."""
 import logging
 import time
 import os
+# HACK: I want Ubuntu Claus to bring me Python 2.7 installed by default...
+try:
+    from collections import OrderedDict as mapping_class
+except ImportError:
+    mapping_class = dict
 
 from ..http_hit import hit
 from multicall import multicall
@@ -31,7 +36,7 @@ class Client(object):
         self.behaviours = []
         self.policy = policy
     @classmethod
-    def from_behaviour_tuples(cls, *behaviour_tuples, **kwargs):
+    def from_parameters(cls, *behaviour_tuples, **kwargs):
         result = cls(**kwargs)
         for behaviour, weight in behaviour_tuples:
             result.add(behaviour, weight)

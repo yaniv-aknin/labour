@@ -193,3 +193,5 @@ class SIGSEGV(Behaviour):
             response.code >= 500 and response < 600):
             return True
         return False
+
+__all__ = list(behaviours) + ['wsgi_dispatcher']

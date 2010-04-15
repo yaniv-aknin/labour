@@ -28,3 +28,5 @@ for server_name in supported_servers:
         exec 'server_map["%s"] = %s' % (server_name, server_name)
     except ImportError:
         pass
+
+import cli

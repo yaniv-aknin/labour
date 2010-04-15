@@ -44,3 +44,4 @@ class Repeat(Policy):
 
 policy_map = dict((policy.__name__, policy)
                   for policy in Policy.__subclasses__())
+__all__ = list(policy_map)
