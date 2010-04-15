@@ -1,5 +1,5 @@
 OVERVIEW:
-Labour is a suite of libraries and test-drivers to test web-servers under various stress conditions pertaining to misbehaving workers.
+Labour is a suite of libraries and test-drivers to benchmark the durability of WSGI web servers under various stress conditions pertaining to misbehaving workers. Labour facilitates the chores of benchmarking WSGI Web Servers, such as starting/shutting servers, generating HTTP requests and reporting results. In addition, Labour provides a WSGI Application which does all sorts of things ("Behaviours") to stress its containing server.
 
 Labour was written by Yaniv Aknin (yaniv@aknin.name).
 
