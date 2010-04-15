@@ -9,7 +9,7 @@ from ..servers import supported_servers
 def print_server_list():
     print("Supported servers:")
     for server_name in supported_servers:
-        print("\t%s %s" %
+        print("    %s %s" %
              ("+" if server_name in server_map else "-", server_name,))
     print("(servers marked with '+' are available on this system)")
 

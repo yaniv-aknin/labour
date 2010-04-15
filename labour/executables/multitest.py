@@ -42,7 +42,7 @@ def parse_arguments(argv):
         '-s', '--servers', action=servers.cli.MultiServerChoice, default=[],
         help="Choose servers to run against (default: all)"
     )
-    parser.add_argument('-i', '--iterations', type=int, default=100,
+    parser.add_argument('-i', '--iterations', type=int, default=128,
                         help="How many requests to issue per server per test")
     parser.add_argument('-p', '--number-processes', type=int, default=cpu_count(),
                         help="How many request-generators to fork in parallel")

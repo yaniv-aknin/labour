@@ -1,3 +1,3 @@
-import cli
-import multiserver
+import singletest
+import multitest
 import basic
