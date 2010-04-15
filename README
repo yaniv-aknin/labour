@@ -3,8 +3,8 @@ Labour is a suite of libraries and test-drivers to test web-servers under variou
 
 Labour was written by Yaniv Aknin (yaniv@aknin.name).
 
-USAGE:
-While I believe Labour can best be used as a library, you can use one of the per-written tests in './bin' to start playing around right now. The simplest test you can run is 'basic', but probably the more interesting one is 'multiserver'.
+QUICK START:
+In the 'bin' directory you will find various executables, try them with '-h'. The simplest test you can run is 'basic', but probably the more interesting one is 'multitest'.
 
 Here's a sample exeuction of basic:
     $ bin/basic 
@@ -17,46 +17,30 @@ Here's a sample exeuction of basic:
 
 A small clarification about wording: when Labour says the request returned "OK" it means the request returned "as expected". Returning as expected is not the same thing as returning HTTP_OK (status 200). This is because some test behaviours can, for example, dictate the request should return with a status code of INTERNAL_SERVER_ERROR. Labour knows kind of result to expect, so if HTTP_OK was returned when INTERNAL_SERVER_ERROR was expected, this will be shown as a failure.
 
-CODE SAMPLE:
+QUICK CODE START:
+Labour's main components are a Server, a Client, a Behaviour, a Policy and a Report. A Server is an object which abstracts away the details of spawning a WSGI Server, shutting it down and wiring it to a test application. The Client is a rather simple HTTP client based on a home-brewed parallelism solution (multiprocessed, not multithreaded) and urllib2. A Behaviour is an object describing what the Client can request the WSGI Application to do (return a page, sleep and return a page, wedge, segfault, etc) as well as what the client should expect following that request (HTTP OK, HTTP Not Found, socket error, etc). After instantiation, the Client should be configured with one or more Behaviours, along with a 'weight' assigned to each Behaviour. The Policy dictates how the Client will choose Behaviours from the weighted list of Behaviours, for example, sequentially or at random. A Report is an object which takes one or more of the result tuples which the client returns after execution, formats and displays them.
+
+Here's a minimalist piece of code which demonstrates code usage of Labour:
     import sys
-    import argparse
     import httplib
 
     from labour import servers
-    from labour import client
+    from labour import tester
     from labour import behaviours
     from labour import reports
+    from labour.tester import policies
 
-    driver = client.Client()
-    driver.add(behaviours.PlainResponse(), weight=98)
-    driver.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
-    driver.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR),
+    client = tester.Client(policy=policies.Random)
+    client.add(behaviours.PlainResponse(), weight=98)
+    client.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
+    client.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR),
                                         weight=1)
 
     with servers.WSGIRef() as server:
-        result = driver.execute(iterations=512)
+        result = client.execute(iterations=512, policy=policies.Random)
 
     reports.PlainReport(result).emit('ascii')
 
-EXAMPLE:
-import sys
-import argparse
-import httplib
-
-from labour import servers
-from labour import client
-from labour import behaviours
-from labour import reports
-
-driver = client.Client()
-driver.add(behaviours.PlainResponse(), weight=98)
-driver.add(behaviours.Sleeping(sleep_duration=0.5), weight=1)
-driver.add(behaviours.PlainResponse(status=httplib.INTERNAL_SERVER_ERROR), weight=1)
-
-with servers.WSGIRef() as server:
-    result = driver.execute(iterations=512)
-
-reports.PlainReport(result).emit('ascii')
 
 TODO: 
  * Add support for more servers.
@@ -64,7 +48,8 @@ TODO:
  * Add pretty HTML output support to reports.
  * Enrich server creation API (specify number of processes, etc).
  * Research occasional very-low failure rate of some servers;
-    (I suspect it's my bug, not theirs)
+    I already found two bugs in WSGI Server (see Concurrence's and FAPWS3's
+    code), but I suspect a bug of my own as well.
  * Grep source for FIXME (and HACK!) and resolve them all :)
 
 ACKNOWLEDGEMENTS:
